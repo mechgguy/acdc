@@ -107,6 +107,18 @@ namespace lidar_detection
       // set yaw angle
       object.fMean[(int)definitions::ca_model::heading] = 0;
 
+      // added here
+      object.fMean[(int)definitions::ca_model::length] = bounding_box.length;
+      object.fMean[(int)definitions::ca_model::width] = bounding_box.width;
+      object.fMean[(int)definitions::ca_model::height] = bounding_box.height;
+      object.fMean[(int)definitions::ca_model::length] = bounding_box.length;
+
+      object.fMean[(int)definitions::ca_model::heading] = bounding_box.yaw;      
+
+      //addded here
+
+
+
       // END TASK 1 CODE   
 
       // get current class_name

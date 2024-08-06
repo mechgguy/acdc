@@ -77,7 +77,16 @@ void GeometricISM::messageCallback(const PointCloud::ConstPtr& pointcloud) {
       double p_ism;
       // TASK 2 BEGIN
       // ADD YOUR CODE HERE...
-
+      // if (auto iterator==end_position){
+      //   p_ism = 0.9;
+      // }
+      // else if (cell == 1 || cell == 2){
+      //   p_ism = (cell==1) ? 0.8 : 0.5; 
+      // }
+      // else {
+      //   p_ism = 0.1;
+      // }
+      // DEBUG THIS
       // TASK 2 END
       
       // combine probability from ism with previous probability in cell using binary Bayes filter

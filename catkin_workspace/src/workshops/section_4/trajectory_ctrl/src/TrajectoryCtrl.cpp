@@ -196,8 +196,8 @@ void TrajectoryControl::TrjDataProc()
     // START TASK 2 CODE HERE
     // calculate vehicle deviations from the trajectory
     // use helping comments from Wiki
-    dy_ = 0.0;
-    dpsi_ = 0.0;
+    dy_ = this->odom_dy_-y_tgt_; // fill here
+    dpsi_ = this->odom_dpsi_ - psi_tgt_; // fill here
     // END TASK 2 CODE HERE
 }
 
@@ -243,8 +243,8 @@ void TrajectoryControl::CalcOdometry(double dt)
     // use helping comments from Wiki
     double yawRate = cur_vehicle_state_.yaw_rate;
     double velocity = cur_vehicle_state_.velocity;
-    odom_dy_ += 0.0;
-    odom_dpsi_ += 0.0;
+    odom_dy_ += sin(yawRate+0.5*yawRate*dt)*velocity*dt; // fill here
+    odom_dpsi_ += yawRate*dt; // fill here
     // END TASK 1 CODE HERE
 }
 
@@ -262,11 +262,11 @@ double TrajectoryControl::LateralControl()
     // START TASK 5 CODE HERE
     // use helping comments from Wiki
     double dt = (ros::Time::now() - vhcl_ctrl_output_.header.stamp).toSec();
-    double w_y = 0.0;
-    double e_y = 0.0;
-    double w_psi = 0.0;
-    double e_psi = 0.0;
-    double psi_dot_des = 0.0;
+    double w_y = 0.0; // fill here
+    double e_y = w_y - dy_; // fill here
+    double w_psi = dy_pid_->Calc(e_y,dt); // fill here
+    double e_psi = w_psi - dpsi_; // fill here
+    double psi_dot_des = dpsi_pid_->Calc(e_psi,dt); // fill here
     // END TASK 5 CODE HERE
 
 
@@ -286,7 +286,7 @@ double TrajectoryControl::LateralControl()
 
     // START TASK 6 CODE HERE
     // use helping comments from Wiki
-    double st_ang_pid = 0.0;
+    double st_ang_pid = psi_dot_des*(wheelbase_+self_st_gradient_*(velocity*velocity))/velocity; // fill here
     // END TASK 6 CODE HERE
 
     // Ackermann feed-forward control with trajectory kappa
@@ -347,8 +347,8 @@ double TrajectoryControl::LongitudinalControl()
     double dt = ros::Time::now().toSec() - vhcl_ctrl_output_.header.stamp.toSec();
     double velocity = cur_vehicle_state_.velocity;
     double w_v = v_tgt_;
-    double e_v = 0.0;
-    double a_fb_v = 0.0;
+    double e_v = w_v - velocity; // fill here
+    double a_fb_v = dv_pid_->Calc(e_v,dt); // fill here
     // END TASK 4 CODE HERE
 
     double a_ctrl = a_fb_v + a_tgt_ * cfg_.k_FF_a;

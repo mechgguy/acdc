@@ -37,9 +37,12 @@ VehicleController *vehicle_controller = nullptr;
  */
 void callbackLaserSensor(const sensor_msgs::LaserScanPtr &msg) {
   // START TASK 2 CODE
-
-
-
+  ROS_INFO("Lidar message received with following distances:");
+  ROS_INFO("Range 0: %f", msg->ranges[0]);
+  ROS_INFO("Range 1: %f", msg->ranges[1]);
+  ROS_INFO("Range 2: %f", msg->ranges[2]);
+  ROS_INFO("Range 3: %f", msg->ranges[3]);
+  ROS_INFO("Range 4: %f", msg->ranges[4]);
   // END TASK 2 CODE
 
   // Copy argument data to local variable
@@ -97,9 +100,13 @@ int main(int argc, char* argv[]) {
   ROS_INFO("Vehicle controller is running...");
 
   // START TASK 1 CODE
-
-
-  ros::spin();
+  ros::Rate rate(20);
+  while (1){
+    ros::spinOnce();
+    
+    rate.sleep();
+  }
+  // ros::spin();
 
 
   // END TASK 1 CODE

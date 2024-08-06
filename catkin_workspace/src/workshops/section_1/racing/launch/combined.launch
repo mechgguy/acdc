@@ -1,0 +1,4 @@
+<launch>
+	<include file="$(find racing)/launch/flatland_simulation.launch"/>
+	<include file="$(find racing)/launch/racing_controller.launch"/>
+</launch>

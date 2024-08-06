@@ -83,8 +83,20 @@ void StateFuser::runSingleSensor() {
     auto P_S_diag = IkaUtilities::getEigenVarianceVec(&measuredObject); // predicted measured state variance
 
     /** START TASK 3 CODE HERE **/
-
-
+    // filled here
+    auto R_diag = C * P_S_diag;
+    Eigen::MatrixXf R = R_diag.asDiagonal();
+    Eigen::MatrixXf C_transposed = C.transpose();
+    Eigen::VectorXf x_hat_S = IkaUtilities::getEigenStateVec(&measuredObject);
+    Eigen::VectorXf z = C * x_hat_S;
+    Eigen::MatrixXf S = (C * globalObject.P() * C_transposed + R);
+    Eigen::MatrixXf K = globalObject.P() * C_transposed * S.inverse();
+    x_hat_G = x_hat_G + K * (z - (C * x_hat_G)); // value of x is edited in place of ikaObject memory
+    // Update global matrix P.
+    Eigen::MatrixXf K_times_C = K * C;
+    Eigen::MatrixXf Identity = Eigen::MatrixXf::Identity(K_times_C.rows(), K_times_C.cols());
+    globalObject.P() = (Identity - K_times_C) * globalObject.P();
+    // filled here
     /** END TASK 3 CODE HERE **/
   }
 }

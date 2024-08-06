@@ -27,7 +27,24 @@ StatePredictor::StatePredictor(std::shared_ptr<Data> data, std::string name)
 void StatePredictor::runSingleSensor()
 {
   /** START TASK 1 CODE HERE **/
+  Eigen::MatrixXf F = data_->F_const_ + data_->prediction_gap_in_seconds * data_->F_timevar_;
+  Eigen::MatrixXf Q = data_->prediction_gap_in_seconds * data_->Q_timevar_;
 
+  for (auto& globalObject : data_->object_list_fused.objects) {
+    // Get the state vector
+    // Eigen::VectorXf x_hat_G = IkaUtilities::getEigenStateVec(&globalObject);
+    auto x_hat_G = IkaUtilities::getEigenStateVec(&globalObject);
+    // Update the state prediction
+    x_hat_G = F * x_hat_G;
+
+    // Update the error covariance matrix
+    globalObject.P() = F * globalObject.P() * F.transpose() + Q;
+  }
+
+data_->object_list_fused.header.stamp = data_->object_list_measured.header.stamp;
+for (auto& globalObject : data_->object_list_fused.objects) {
+    globalObject.header.stamp = data_->object_list_measured.header.stamp;
+}
 
   /** END TASK 1 CODE HERE **/
 }
