@@ -26,7 +26,7 @@ void ETSIViz::MAPCallback(const definitions::v2x_MAP& msg) {
     
     // ### START CODE HERE ###
     // Identify number of intersections in message
-    int n_intersections = 0; // Task
+    int n_intersections = msg.intersections.size(); // Task // fill here
     // ### END CODE HERE ###
 
     // Loop over all intersections in message

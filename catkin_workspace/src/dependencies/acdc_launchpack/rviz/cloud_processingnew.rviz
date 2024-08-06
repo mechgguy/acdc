@@ -88,7 +88,7 @@ Visualization Manager:
       Show Text: false
       Source ID: -1
       Text Color: 204; 51; 204
-      Topic: /topicGT
+      Topic: ika_acdc_22/objectList_gt
       Unreliable: false
       Value: false
       Z axes shift for text.: 0
@@ -106,7 +106,7 @@ Visualization Manager:
               Show Text: false
               Source ID: -1
               Text Color: 249; 82; 101
-              Topic: /topicA 
+              Topic: ika_acdc_22/objectList_a 
               Unreliable: false
               Value: true
               Z axes shift for text.: 0
@@ -120,7 +120,7 @@ Visualization Manager:
               Show Text: false
               Source ID: -1
               Text Color: 0; 255; 255
-              Topic: /topicB
+              Topic: ika_acdc_22/objectList_b
               Unreliable: false
               Value: true
               Z axes shift for text.: 0

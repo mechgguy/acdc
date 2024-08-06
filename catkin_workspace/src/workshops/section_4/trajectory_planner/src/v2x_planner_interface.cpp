@@ -42,7 +42,7 @@ void PLANNER::callbackSPAT(const definitions::v2x_SPAT& msg)
 
     // ### START CODE HERE ###
     // Identify number of intersections in message
-    int n_intersections = 0; // Task
+    int n_intersections = msg.spatData_intersections.size(); // Task // fill here
     // ### END CODE HERE ###
 
     // Loop all intersections in message
@@ -57,9 +57,18 @@ void PLANNER::callbackSPAT(const definitions::v2x_SPAT& msg)
                 {
                     trafficlights[k].last_spat = ros::Time::now();
 
-                    // ### START CODE HERE ###
+                     // ### START CODE HERE ###
                     // Check if signal state is red or not
-                    trafficlights[k].red = true; // Task
+                    // fill here
+                    if(spat_intsctn.states[m].state_time_speed[0].eventState == 5 || spat_intsctn.states[m].state_time_speed[0].eventState == 6)
+                    {
+                        trafficlights[k].red = false;
+                    }
+                    else
+                    {
+                        trafficlights[k].red = true;
+                    }
+                    // trafficlights[k].red = true; // Task 
                     // ### END CODE HERE ###
                 }
             }
@@ -74,7 +83,7 @@ void PLANNER::callbackMAP(const definitions::v2x_MAP& msg)
 
     // ### START CODE HERE ###
     // Identify number of intersections in message
-    int n_intersections = 0; // Task
+    int n_intersections = msg.intersections.size(); // Task // fill here
     // ### END CODE HERE ###
 
     // Loop all intersections in message
@@ -88,7 +97,7 @@ void PLANNER::callbackMAP(const definitions::v2x_MAP& msg)
             
             // ### START CODE HERE ###
             // only ingress lanes can consider traffic signals -> skip all egress lanes
-            bool is_egress_lane = true; // Task      
+            bool is_egress_lane = lane.directionalUse != definitions::v2x_MAP_Lane::LaneDirection_ingressPath; // Task      // fill here      
             if (is_egress_lane){
                 continue;
             }

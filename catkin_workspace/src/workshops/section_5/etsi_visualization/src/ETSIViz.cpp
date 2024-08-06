@@ -84,11 +84,11 @@ void ETSIViz::CAMCallback(const definitions::v2x_CAM& msg){
       // ### START CODE HERE
       // fill with information from message
       // use helping comments from Wiki
-      obj.IdInternal = 0; // stationID               // Task
-      float lon = 0;      // longitude (x)           // Task
-      float lat = 0;      // latitude (y)            // Task
-      float v_x = 0;      // velocity in x direction // Task
-      float v_y = 0;      // velocity in y direction // Task
+      obj.IdInternal = 0; // stationID               // Task // fill here
+      float lon = 0;      // longitude (x)           // Task // fill here
+      float lat = msg.basic_container.referencePosition_latitude;      // latitude (y)            // Task // fill here
+      float v_x = msg.high_freq_container.speed_speedValue * std::cos(msg.high_freq_container.heading_headingValue);      // velocity in x direction // Task // fill here
+      float v_y = 0;      // velocity in y direction // Task // fill here
       // ### END CODE HERE
 
     obj.fMean.resize((int)definitions::ctra_model::COUNT);

@@ -56,8 +56,8 @@
   <!-- Trajectory Planner -->
   <node name="trajectory_planner_clean" pkg="trajectory_planner" type="trajectory_planner_clean.sh" output="screen"></node>
   <node name="trajectory_planner" pkg="trajectory_planner" type="trajectory_planner" output="screen">
-    <param name="topic_spatem" value="/SPATEM" /> <!-- fill in here your choosen topic name -->
-    <param name="topic_mapem" value="/MAPEM" /> <!-- fill in here your choosen topic name -->
+    <param name="topic_spatem" value="ika_acdc_22/SPATEM" /> <!-- fill in here your choosen topic name -->
+    <param name="topic_mapem" value="ika_acdc_22/MAPEM" /> <!-- fill in here your choosen topic name -->
   </node>
 
    <!-- Trajectory Controller -->
