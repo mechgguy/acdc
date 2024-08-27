@@ -34,6 +34,15 @@
 #include "trajectory_planner.hpp"
 #include <Eigen/Geometry>
 
+// global variables - added here
+std::vector<double> vehicle_position;
+std::vector<geometry_msgs::Point> stop_line(2);
+double stop_distance;
+double width;
+
+// std::vector<PLANNER::TrafficLight> tr_i1;
+PLANNER::TrafficLight tr_i1;
+
 // Set control constraints
 void PLANNER::getControlConstraints(Eigen::VectorXd &u_lb, Eigen::VectorXd &u_ub, Eigen::VectorXi &sparsity)
 {
@@ -153,6 +162,14 @@ SC CostTermIntermediate<STATE_DIM, CONTROL_DIM, MPC_NODE, SCALAR_EVAL, SCALAR>::
 
     // This cost term is relevant for Section 5
     // Traffic Light
+    // Traffic Light
+    // traffic light position change, change this point to a line
+    // changed here
+    SC TrafficLightX1 = x[MPC_NODE::TRAFFICLIGHT::X_TL];
+    SC TrafficLightY1 = x[MPC_NODE::TRAFFICLIGHT::Y_TL];
+
+    // changed here
+    
     SC TrafficLightX = x[MPC_NODE::TRAFFICLIGHT::X_TL];
     SC TrafficLightY = x[MPC_NODE::TRAFFICLIGHT::Y_TL];
     SC TrafficLightState = x[MPC_NODE::TRAFFICLIGHT::STATE];
@@ -235,6 +252,39 @@ void ACDC_VehcicleSystem<SCALAR>::computeControlledDynamics(const StateVector<ST
     // derivative(6)  ; // derivative of delta
     
     // END TASK 1 CODE HERE
+    // changed here
+    // EVALUATION PARAMETER
+    vehicle_position = {state(0), state(1)};
+    PLANNER obj;
+    stop_line = obj.createStopLine(tr_i1.ingress_lane, 1);
+
+    // stop_line = createStopLine(TrafficLightState.ingress_lane, 1); //added debug, 1 is width
+    
+    // stop_line = createStopLine(tr_i1.ingress_lane, 1);
+    // const std::vector<geometry_msgs::Point> stop_line;
+    std::vector<geometry_msgs::Point> stop_line_points;
+    for (const auto& point : stop_line) {
+        geometry_msgs::Point point_msg;
+        // geometry_msgs::Point point;
+        double x = point.x;
+        double y = point.y;
+        point_msg.x = x; // point[0];
+        point_msg.y = y; // point[1];
+        // Assuming stop_line is a vector of 2D points. Add z if it's 3D.
+        stop_line_points.push_back(point_msg);
+    }
+
+    // geometry_msgs::Point vehicle_position_point;
+    // vehicle_position_point.x = vehicle_position[0];
+    // vehicle_position_point.y = vehicle_position[1];
+    // Assuming vehicle_position is a 2D point. Add z if it's 3D.
+    
+    // stop_distance = PLANNER::distanceToStopLine(vehicle_position, stop_line_points);
+    stop_distance = obj.distanceToStopLine(vehicle_position, stop_line_points);
+
+    // stop_distance = distanceToStopLine(vehicle_position, stop_line_points);
+    // stop_distance = PLANNER::distanceToStopLine(vehicle_position, stop_line_points);
+    // changed here
 }
 
 // Called with our main frequency. Evaluates the MPC and sends new trajectory to controller.
@@ -252,6 +302,19 @@ void PLANNER::runMPC()
         ROS_WARN("Outdated vehicle data!");
         bReset = true;
     }
+
+    // changed here
+    // call createStopLine function
+    width = 1.0;
+
+    
+    // stop_line = createStopLine(TrafficLight.ingress_lane, width);
+    
+    // stop_line = createStopLine(trafficlights.ingress_lane, width);
+    // vehicle_position = {statex, statey};
+    stop_distance = distanceToStopLine(vehicle_position, stop_line);
+    // move this all to hpp maybe
+    // changed here
 
     // We have a valid MPC solution from the last iteration
     if (!bReset)
@@ -373,6 +436,82 @@ void PLANNER::runMPC()
     publishTrajectory();
 }
 
+// changed here-added
+std::vector<geometry_msgs::Point> PLANNER::createStopLine(const std::vector<geometry_msgs::Point>& ingress_lane, double width=1) 
+{
+    std::vector<geometry_msgs::Point> stop_line(2);
+
+    if (ingress_lane.size() < 2) {
+        // Not enough points to define a line
+        return stop_line;
+    }
+
+    // Calculate the direction of the ingress lane
+    geometry_msgs::Point dir;
+    dir.x = ingress_lane.back().x - ingress_lane[ingress_lane.size() - 2].x;
+    dir.y = ingress_lane.back().y - ingress_lane[ingress_lane.size() - 2].y;
+
+    // Calculate the orthogonal direction
+    geometry_msgs::Point ortho_dir;
+    ortho_dir.x = -dir.y;
+    ortho_dir.y = dir.x;
+
+    // Normalize the orthogonal direction
+    double length = std::sqrt(ortho_dir.x * ortho_dir.x + ortho_dir.y * ortho_dir.y);
+    ortho_dir.x /= length;
+    ortho_dir.y /= length;
+
+    // Scale by the desired width
+    ortho_dir.x *= width / 2;
+    ortho_dir.y *= width / 2;
+
+    // Calculate the stop line points
+    stop_line[0].x = ingress_lane.back().x + ortho_dir.x;
+    stop_line[0].y = ingress_lane.back().y + ortho_dir.y;
+    stop_line[1].x = ingress_lane.back().x - ortho_dir.x;
+    stop_line[1].y = ingress_lane.back().y - ortho_dir.y;
+    
+    return stop_line;
+}
+
+double PLANNER::calculateDistance(std::vector<double>& point1, std::vector<double>& point2) 
+{
+    double dx = point2[0] - point1[0];
+    double dy = point2[1] - point1[1];
+    // std::cout << "Inside calculateDistance in trajectory_planner.cpp";
+    return std::sqrt(dx * dx + dy * dy);
+}
+
+double PLANNER::distanceToStopLine(std::vector<double>& vehicle_position, const std::vector<geometry_msgs::Point>& stop_line) 
+{
+    std::vector<double> stop_line_point1 = {stop_line[0].x, stop_line[0].y};
+    std::vector<double> stop_line_point2 = {stop_line[1].x, stop_line[1].y};
+    double distance1 = calculateDistance(vehicle_position, stop_line_point1);
+    double distance2 = calculateDistance(vehicle_position, stop_line_point2);
+    // double distance1 = calculateDistance(vehicle_position, stop_line[0]);   
+    // double distance2 = calculateDistance(vehicle_position, stop_line[1]);
+    // std::cout << "Inside distanceToStopLine in trajectory_planner.cpp";
+    return std::min(distance1, distance2);
+}
+
+double dotProduct(const geometry_msgs::Point& vec1, const geometry_msgs::Point& vec2) {
+    // std::cout << "Inside dotProduct in trajectory_planner.cpp";
+    return vec1.x * vec2.x + vec1.y * vec2.y;
+}
+
+bool isMovingTowardsStopLine(const geometry_msgs::Point& vehicle_position, const geometry_msgs::Point& vehicle_direction, const std::vector<geometry_msgs::Point>& stop_line) {
+    // Calculate the direction of the stop line
+    geometry_msgs::Point stop_line_dir;
+    stop_line_dir.x = stop_line[1].x - stop_line[0].x;
+    stop_line_dir.y = stop_line[1].y - stop_line[0].y;
+
+    // Calculate the dot product of the vehicle's direction and the stop line's direction
+    double dot = dotProduct(vehicle_direction, stop_line_dir);
+    // std::cout << "Inside isMovingTowardsStopLine in trajectory_planner.cpp";
+    // If the dot product is positive, the vehicle is moving towards the stop line
+    return dot > 0;
+}
+//changed here - added
 /*
  *
  * Entry point of the ROS node.

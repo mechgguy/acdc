@@ -82,11 +82,9 @@ float IouCalculator::computeIoU(IouCalculator::Bbox &a, IouCalculator::Bbox &b)
   float iou = area_inter / area_combined;
   return iou;
   // filled here
-
   /** END TASK 2.1 CODE HERE **/
   return 0.f;
 }
-
 
 IouCalculator::Bbox IouCalculator::getBbox(const float *pos_x, const float *pos_y, 
 const float *length, const float *width, const float *rot_angle) {

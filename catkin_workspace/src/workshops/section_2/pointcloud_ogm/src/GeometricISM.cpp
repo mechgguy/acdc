@@ -77,7 +77,8 @@ void GeometricISM::messageCallback(const PointCloud::ConstPtr& pointcloud) {
       double p_ism;
       // TASK 2 BEGIN
       // ADD YOUR CODE HERE...
-      // if (auto iterator==end_position){
+      // int iterator;
+      // if (iterator==end_position){
       //   p_ism = 0.9;
       // }
       // else if (cell == 1 || cell == 2){

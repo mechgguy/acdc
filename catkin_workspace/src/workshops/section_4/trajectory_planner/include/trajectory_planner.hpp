@@ -61,6 +61,8 @@
 #include "CostFunctionADParams.hpp"
 #include "CostFunctionADParams-impl.hpp"
 
+#include <vector> // added this
+
 using namespace ct::core;
 using namespace ct::optcon;
 
@@ -265,10 +267,31 @@ public:
                                            StateVector<STATE_DIM, SCALAR> &derivative) override;
 };
 
+// changed here
+enum class TrafficLightStatus
+{
+    UNKNOWN,
+    GREEN,
+    YELLOW,
+    RED
+};
+// changed here
+
+
+
+
+
+
+
+
 // ROS Node class
 class PLANNER
 {
 public:
+
+    PLANNER() { 
+        // Initialize any other members if needed
+    }
     // Constants for tweaking
     static const size_t params_dim = 77; // (Passive) parameter amount used in the AD cost functions. They are used for configurable settings (e.g. weights, see amount below) and the rest is filled with reference path samples.
                                          // Increasing this will allow more reference path samples to be used, but increases the JIT compilation time when initially starting the MPC.
@@ -306,8 +329,11 @@ public:
         STATE = 23
     };
 
+    // changed here
     struct TrafficLight
     {
+        geometry_msgs::Point position;
+        std::vector<geometry_msgs::Point> stop_line;
         int stationID;
         std::vector<geometry_msgs::Point> ingress_lane;
         int sig_id;
@@ -315,6 +341,7 @@ public:
         bool red;
         ros::Time last_spat;
     };
+    // changed here
 
     std::vector<TrafficLight> trafficlights;
 
@@ -377,6 +404,20 @@ public:
         dx = 0.0;
         dy = 0.0;
         ds = 0.0;
+
+        // add variables
+        std::vector<geometry_msgs::Point> stop_line;
+        // stop_line = new std::vector<geometry_msgs::Point>;
+
+        // stop_line = std::vector<geometry_msgs::Point>(2);
+        double stop_distance = 0.0;
+        std::vector<geometry_msgs::Point> ingress_lane;
+        // ingress_lane = new std::vector<geometry_msgs::Point>(2);
+        // ingress_lane = std::vector<geometry_msgs::Point>(2);
+        double statex = 0.0;
+        double statey = 0.0; 
+        // distanceToStopLine = 0.0;
+
 
         //TF
         transform_buffer_ = new tf2_ros::Buffer;
@@ -540,6 +581,18 @@ public:
         ROS_INFO_STREAM("Initialization of Trajectory Planner done!");
 
         bReset = true;
+        // add variables
+        std::vector<geometry_msgs::Point> stop_line;
+        // stop_line = new std::vector<geometry_msgs::Point>;
+
+        // stop_line = std::vector<geometry_msgs::Point>(2);
+        double stop_distance = 0.0;
+        std::vector<geometry_msgs::Point> ingress_lane;
+        // ingress_lane = new std::vector<geometry_msgs::Point>(2);
+        // ingress_lane = std::vector<geometry_msgs::Point>(2);
+        double statex = 0.0;
+        double statey = 0.0; 
+        // distanceToStopLine = 0.0;
     }
 
     // Main loop, wait for input.
@@ -940,6 +993,12 @@ public:
             return objects[id_lowest_cost];
         }
     }
+    
+    // added here
+    // double distanceToStopLine(const geometry_msgs::Point& vehicle_position, const std::vector<geometry_msgs::Point>& stop_line);
+    std::vector<geometry_msgs::Point> createStopLine(const std::vector<geometry_msgs::Point>& ingress_lane, double width);
+    double distanceToStopLine(std::vector<double>& point_from, const std::vector<geometry_msgs::Point>& stop_line);
+    double calculateDistance(std::vector<double>& point1, std::vector<double>& point2);
 
     // Defined in .cpp files
     TrafficLight getRelevantTrafficLight(std::vector<TrafficLight> tls);

@@ -94,6 +94,7 @@ float MahalanobisCalculator::distance(
   // P_S_diag.asDiagonal(); // P_S
   
   /** START TASK 2.2 CODE HERE **/
+  // filled here
   // reduce variances from complete state dimensions to dimensions in which association should happen
   // const Eigen::VectorXf &P_S_diag = IkaUtilities::getEigenVarianceVec(&measured_object);
   const Eigen::MatrixXf measured_cov = dim_red_mat * P_S_diag.asDiagonal() * dim_red_mat.transpose();
