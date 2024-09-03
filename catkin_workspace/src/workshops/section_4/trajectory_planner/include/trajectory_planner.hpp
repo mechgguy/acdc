@@ -269,6 +269,10 @@ public:
 class PLANNER
 {
 public:
+
+    PLANNER() {
+
+    }
     // Constants for tweaking
     static const size_t params_dim = 77; // (Passive) parameter amount used in the AD cost functions. They are used for configurable settings (e.g. weights, see amount below) and the rest is filled with reference path samples.
                                          // Increasing this will allow more reference path samples to be used, but increases the JIT compilation time when initially starting the MPC.
@@ -941,6 +945,10 @@ public:
         }
     }
 
+    // added here
+    // double distanceToStopLine(const geometry_msgs::Point& vehicle_position, const std::vector<geometry_msgs::Point>& stop_line);
+    std::vector<geometry_msgs::Point> createStopLine(const std::vector<geometry_msgs::Point>& ingress_lane, double width);
+    
     // Defined in .cpp files
     TrafficLight getRelevantTrafficLight(std::vector<TrafficLight> tls);
     std::vector<PLANNER::TrafficLight> getLocalTrafficLights();
