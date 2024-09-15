@@ -31,17 +31,8 @@
  *
  */
 
-#include "trajectory_planner.hpp"
+#include "trajectory_planner_original.hpp"
 #include <Eigen/Geometry>
-
-// global variables - added here
-std::vector<double> vehicle_position;
-std::vector<std::vector<geometry_msgs::Point>> stop_line;
-// std::vector<geometry_msgs::Point> stop_line(2);
-double stop_distance;
-double width;
-PLANNER::TrafficLight tr_i1;
-
 
 // Set control constraints
 void PLANNER::getControlConstraints(Eigen::VectorXd &u_lb, Eigen::VectorXd &u_ub, Eigen::VectorXi &sparsity)
@@ -88,11 +79,6 @@ SC CostTermIntermediate<STATE_DIM, CONTROL_DIM, MPC_NODE, SCALAR_EVAL, SCALAR>::
     const size_t index = MPC_NODE::state_dim + MPC_NODE::params_dim_cfg;
     SC distance = CppAD::sqrt(CppAD::pow(x[index] - x[0], 2) + CppAD::pow(x[index + 1] - x[1], 2));
     SC velocity = x[index + 2];
-    SC distPredictionToEgo = SC(0.0);
-    SC currDistPredToEgo = CppAD::sqrt(CppAD::pow(x[0] - x[index + 3], 2) + CppAD::pow(x[1] - x[index + 4], 2));
-    SC dist2stopline = SC(0.0); // added
-    // dist2stopline = CppAD::sqrt(CppAD::pow(x[index] - stop_line[0].x, 2) + CppAD::pow(x[index + 1] - stop_line[0].y, 2));
-
     for (size_t i = index + 3; i < STATE_DIM - 2; i += 3)
     {
         SC currDist = CppAD::sqrt(CppAD::pow(x[i] - x[0], 2) + CppAD::pow(x[i + 1] - x[1], 2));
@@ -102,7 +88,7 @@ SC CostTermIntermediate<STATE_DIM, CONTROL_DIM, MPC_NODE, SCALAR_EVAL, SCALAR>::
 
     // Ref path term
     SC pathRef = x[MPC_NODE::WEIGHTS::PATH_REF];
-    SC pathCost = CppAD::CondExpLt(distance, pathRef, distance / pathRef, CppAD::CondExpLt(CppAD::exp(distance / pathRef - 1), SC(10.0), CppAD::exp(distance / pathRef - 1), SC(10.0)));
+    SC pathCost = distance / pathRef;
     SC pathWeight = x[MPC_NODE::WEIGHTS::PATH];
     SC pathTerm = CppAD::pow(pathCost * pathWeight, 2);
 
@@ -122,35 +108,37 @@ SC CostTermIntermediate<STATE_DIM, CONTROL_DIM, MPC_NODE, SCALAR_EVAL, SCALAR>::
     // u[0]: j_lon -> longitudinal jerk
     // u[1]: alpha -> Steering Rate
 
+
     // if necessary use CppAD::sin(...), CppAD::cos(...), CppAD::tan(...), CppAD::pow(...), CppAD::sqrt(...)
     // Longitudinal jerk term
     SC jerkRef = x[MPC_NODE::WEIGHTS::JERK_REF];
-    SC jerkLonCost  = u[0] / jerkRef; // fill here
+    SC jerkLonCost = u[0] / jerkRef;
     SC jerkLonWeight = x[MPC_NODE::WEIGHTS::JERK];
-    SC jerkLonTerm  = CppAD::pow(jerkLonCost * jerkLonWeight,2); // fill here
+    SC jerkLonTerm = CppAD::pow(jerkLonCost * jerkLonWeight, 2);
 
     // Alpha term
     SC alphaRef = x[MPC_NODE::WEIGHTS::ALPHA_REF];
-    SC alphaCost = u[1] / jerkRef; // fill here
+    SC alphaCost = u[1] / alphaRef;
     SC alphaWeight = x[MPC_NODE::WEIGHTS::ALPHA];
-    SC alphaTerm = CppAD::pow(alphaCost * alphaWeight,2);
+    SC alphaTerm = CppAD::pow(alphaCost * alphaWeight, 2);
 
     // Lateral jerk term
-    // The vehicles wheel-base is defined by the variable wheelBase
+    //The vehicles wheel-base is defined by the variable wheelBase
     double wheelBase = MPC_NODE::systemDynamics::wheelBase;
-    SC jLat = (1 / wheelBase) * (2 * x[3] * CppAD::tan(x[6]) * x[4] + CppAD::pow(x[3], 2) * (CppAD::pow(CppAD::tan(x[6]), 2) + 1) * u[1]); // fill here
-    SC jerkLatCost = jLat / jerkRef; // fill here
+    SC jLat = (1 / wheelBase) * (2 * x[3] * CppAD::tan(x[6]) * x[4] + CppAD::pow(x[3], 2) * (CppAD::pow(CppAD::tan(x[6]), 2) + 1) * u[1]);
+    SC jerkLatCost = jLat / jerkRef;
     SC jerkLatWeight = x[MPC_NODE::WEIGHTS::JERK];
-    SC jerkLatTerm = CppAD::pow(jerkLatCost * jerkLatWeight, 2); // fill here
+    SC jerkLatTerm = CppAD::pow(jerkLatCost * jerkLatWeight, 2);
+
     // END TASK 2 CODE HERE
 
     // START TASK 3 CODE HERE
     // Velocity Term
     // if necessary use CppAD::sin(...), CppAD::cos(...), CppAD::tan(...), CppAD::pow(...), CppAD::sqrt(...)
     SC vScale = CppAD::CondExpGt(velocity, SC(10.0 / 3.6), velocity, SC(10.0 / 3.6));
-    SC vCost = (velocity - x[3]) / vScale; // fill here
+    SC vCost = (velocity - x[3]) / vScale;
     SC vWeight = x[MPC_NODE::WEIGHTS::VEL];
-    SC velTerm = CppAD::pow(vCost * vWeight, 2); // fill here
+    SC velTerm = CppAD::pow(vCost * vWeight, 2);
     // END TASK 3 CODE HERE
 
     // START TASK 4 CODE HERE
@@ -159,72 +147,22 @@ SC CostTermIntermediate<STATE_DIM, CONTROL_DIM, MPC_NODE, SCALAR_EVAL, SCALAR>::
     SC dynObjX = x[MPC_NODE::DYNOBJCOORDS::X];
     SC dynObjY = x[MPC_NODE::DYNOBJCOORDS::Y];
     SC dynObjRef = x[MPC_NODE::WEIGHTS::DYNOBJ_REF];
-    SC dynObjDist = CppAD::sqrt(CppAD::pow(dynObjX - x[0], 2) + CppAD::pow(dynObjY - x[1], 2)); // fill here
+    SC dynObjDist = CppAD::sqrt(CppAD::pow(dynObjX - x[0], 2) + CppAD::pow(dynObjY - x[1], 2));
     SC dynObjCost = CppAD::CondExpLt(dynObjDist, dynObjRef, CppAD::cos(SC(M_PI) * CppAD::pow(dynObjDist, 2) / CppAD::pow(dynObjRef, 2)) + 1, SC(0.0));
     SC dynObjWeight = x[MPC_NODE::WEIGHTS::DYNOBJ];
-    SC dynObjTerm = CppAD::pow(dynObjCost * dynObjWeight, 2); //fill here
+    SC dynObjTerm = CppAD::pow(dynObjCost * dynObjWeight, 2);
     // END TASK 4 CODE HERE
-
 
     // This cost term is relevant for Section 5
     // Traffic Light
-    // Traffic Light
-    // traffic light position change, change this point to a line
-    // changed here
-    SC IngressPointX1 = x[MPC_NODE::TRAFFICLIGHT::X_IL];
-    SC IngressPointY1 = x[MPC_NODE::TRAFFICLIGHT::Y_IL];
-    // SC TrafficLightChange = x[MPC_NODE::TRAFFICLIGHT::CHANGE];
-    // SC dist2light = x[MPC_NODE::TRAFFICLIGHT::DIST];
-
-    // changed here
-
-
-    // Load DECELMODE variable (may be changed during traffic light cost term calculation)
-    SC tlDecelerationMode = x[MPC_NODE::TRAFFICLIGHT::DECELMODE];
-
-    // Load parameters
-    SC TrafficLightRef = x[MPC_NODE::WEIGHTS::TRAFFICLIGHT_REF];
-    SC TrafficLightWeight = x[MPC_NODE::WEIGHTS::TRAFFICLIGHT];
-
-    // Load Traffic Lights
     SC TrafficLightX = x[MPC_NODE::TRAFFICLIGHT::X_TL];
     SC TrafficLightY = x[MPC_NODE::TRAFFICLIGHT::Y_TL];
     SC TrafficLightState = x[MPC_NODE::TRAFFICLIGHT::STATE];
-    SC TrafficLightChange = x[MPC_NODE::TRAFFICLIGHT::CHANGE];
-    SC TrafficLightDistanceAlongPathVariable = x[MPC_NODE::TRAFFICLIGHT::DISTALONGPATH];
-    SC TrafficLightDistanceAlongPath = TrafficLightDistanceAlongPathVariable - distPredictionToEgo;
-    SC TrafficLightILX = x[MPC_NODE::TRAFFICLIGHT::X_IL]; // x dimension of one point of ingress lane
-    SC TrafficLightILY = x[MPC_NODE::TRAFFICLIGHT::Y_IL]; // y dimension of one point of ingress lane
-    SC dTL_X = TrafficLightX - TrafficLightILX; // x dimension of the TL orientation vector (TL location - TL ingress line point)
-    SC dTL_Y = TrafficLightY - TrafficLightILY; // y dimension of the TL orientation vector (TL location - TL ingress line point)
-
-    // Check if 1st traffic light will turn red if current velocity is maintained 
-    // -> only trigger if vehicle speed is above threshold -> here: current speed must be bigger than 25 km/h (not meaningful during acceleration after a previous TL just turned green)
-    // -> also activate deceleration mode for this case (if not already activated)
-    SC TrafficLightV2XThreshold = SC(6.944); // 25 km/h
-    SC TrafficLightStateV2X = CppAD::CondExpEq(TrafficLightState, SC(0.0), CppAD::CondExpLt(x[3] * TrafficLightChange, TrafficLightDistanceAlongPath, CppAD::CondExpGt(x[3], TrafficLightV2XThreshold, SC(1.0), SC(0.0)), SC(0.0)), SC(1.0));
-    tlDecelerationMode = CppAD::CondExpEq(tlDecelerationMode, SC(0.0), CppAD::CondExpEq(TrafficLightState, SC(0.0), CppAD::CondExpLt(x[3] * TrafficLightChange, TrafficLightDistanceAlongPath, CppAD::CondExpGt(x[3], TrafficLightV2XThreshold, SC(1.0), SC(0.0)), SC(0.0)), SC(1.0)), SC(1.0));
-    SC TrafficLightDotProd = ((TrafficLightX - x[0]) * dTL_X + (TrafficLightY - x[1]) * dTL_Y); //use the dot product of the TL orientation vector and the distance vector as indicatior if the stopline was crossed or not
-    // calculate distance to stopline based on linear model of stopline (proof see report)
-    SC TrafficLightClosestDist = CppAD::abs((x[0] - TrafficLightX) * (- dTL_X) - (x[1] - TrafficLightY) * dTL_Y)/CppAD::sqrt(CppAD::pow(dTL_Y, 2) + CppAD::pow(- dTL_X, 2));
-    SC TrafficLightDist = CppAD::CondExpLt(TrafficLightDotProd, SC(0.0), TrafficLightRef, TrafficLightClosestDist); // negative distance represents the vehicle already crossed the stoping line
-    SC TrafficLightCost = CppAD::CondExpEq(TrafficLightStateV2X, SC(1.0), CppAD::CondExpLt(TrafficLightDist, TrafficLightRef, CppAD::cos(SC(M_PI) * CppAD::pow(TrafficLightDist, 2) / CppAD::pow(TrafficLightRef, 2)) + 1, SC(0.0)), SC(0.0));
-    // SC TrafficLightRef = x[MPC_NODE::WEIGHTS::TRAFFICLIGHT_REF];
-    // TrafficLightRef = TrafficLightRef + dist2light + dist2stopline; // changed here
+    SC TrafficLightRef = x[MPC_NODE::WEIGHTS::TRAFFICLIGHT_REF];
+    SC TrafficLightDist = CppAD::sqrt(CppAD::pow(TrafficLightX - x[0], 2) + CppAD::pow(TrafficLightY - x[1], 2));
+    SC TrafficLightCost = CppAD::CondExpEq(TrafficLightState,SC(1.0),CppAD::CondExpLt(TrafficLightDist, TrafficLightRef, CppAD::cos(SC(M_PI) * CppAD::pow(TrafficLightDist, 2) / CppAD::pow(TrafficLightRef, 2)) + 1, SC(0.0)),SC(0.0));
+    SC TrafficLightWeight = x[MPC_NODE::WEIGHTS::TRAFFICLIGHT];
     SC TrafficLightTerm = CppAD::pow(TrafficLightCost * TrafficLightWeight, 2);
-
-    // Penalize hard steering while at high speeds
-    SC alphaCostHighSpeedsLowerBoundary = SC(8.333); // 30 km/h
-    SC alphaCostHighSpeedsHigherBoundary = SC(13.888); // 50 km/h
-    SC alphaCostHighSpeedsMaxCost = SC(2.0);
-    SC alphaCostHighSpeeds = CppAD::CondExpGt(x[3], alphaCostHighSpeedsLowerBoundary, alphaCost * ((alphaCostHighSpeedsMaxCost / (alphaCostHighSpeedsHigherBoundary - alphaCostHighSpeedsLowerBoundary)) * x[3] - (alphaCostHighSpeedsMaxCost / (alphaCostHighSpeedsHigherBoundary - alphaCostHighSpeedsLowerBoundary)) * alphaCostHighSpeedsLowerBoundary), SC(0.0));
-
-    // Penalize steering during decelerating at traffic light (only for speeds above 15 km/h)
-    SC tlDecelerationModeThreshold = SC(4.166); // 15 km/h
-    SC alphaCostDecelMode = CppAD::CondExpGt(x[3], tlDecelerationModeThreshold, SC(10.0) * alphaCost * tlDecelerationMode, SC(0.0));
-
-    alphaTerm = CppAD::pow(alphaCost * alphaWeight, 2) + CppAD::pow(alphaCostHighSpeeds * alphaWeight, 2) + CppAD::pow(alphaCostDecelMode * alphaWeight, 2);
-
 
     // Return sum
     return pathTerm + jerkLonTerm + jerkLatTerm + alphaTerm + velTerm + dynObjTerm + TrafficLightTerm;
@@ -286,44 +224,7 @@ void ACDC_VehcicleSystem<SCALAR>::computeControlledDynamics(const StateVector<ST
     derivative(4) = control(0); // derivative of a
     derivative(5) = (state(3) / wheelBase) * tan(state(6)); // derivative of psi
     derivative(6) = control(1); // derivative of delta
-    // state(6) = atan(wheelBase/R);
-    // state(3) = derivative(6)*R;
-
     // END TASK 1 CODE HERE
-
-    // ROS_INFO_STREAM("Ingress Lane: " << tr_i1.ingress_lane);
-
-    // stop_line = obj.createStopLine(tr_i1.ingress_lane, 1);
-
-    // stop_line = createStopLine(TrafficLightState.ingress_lane, 1); //added debug, 1 is width
-
-    // stop_line = createStopLine(tr_i1.ingress_lane, 1);
-    // const std::vector<geometry_msgs::Point> stop_line;
-    // std::vector<geometry_msgs::Point> stop_line_points;
-    // for (const auto& point : stop_line) {
-    //     geometry_msgs::Point point_msg;
-    //     // geometry_msgs::Point point;
-    //     double x = point.x;
-    //     double y = point.y;
-    //     point_msg.x = x; // point[0];
-    //     point_msg.y = y; // point[1];
-    //     // Assuming stop_line is a vector of 2D points. Add z if it's 3D.
-    //     stop_line_points.push_back(point_msg);
-    // }
-
-    // geometry_msgs::Point vehicle_position_point;
-    // vehicle_position_point.x = vehicle_position[0];
-    // vehicle_position_point.y = vehicle_position[1];
-    // // Assuming vehicle_position is a 2D point. Add z if it's 3D.
-
-    // // stop_distance = PLANNER::distanceToStopLine(vehicle_position, stop_line_points);
-    // stop_distance = obj.distanceToStopLine(vehicle_position, stop_line_points);
-
-    // stop_distance = distanceToStopLine(vehicle_position, stop_line_points);
-    // stop_distance = PLANNER::distanceToStopLine(vehicle_position, stop_line_points);
-    // changed here
-
-
 }
 
 // Called with our main frequency. Evaluates the MPC and sends new trajectory to controller.
@@ -462,104 +363,6 @@ void PLANNER::runMPC()
     publishTrajectory();
 }
 
-// changed here-added
-std::vector<geometry_msgs::Point> PLANNER::createStopLine(const std::vector<geometry_msgs::Point>& ingress_lane, double width=1)
-{
-    std::vector<geometry_msgs::Point> stop_line(2);
-
-    if (ingress_lane.size() < 2) {
-        // Not enough points to define a line
-        return stop_line;
-    }
-
-    // Calculate the direction of the ingress lane
-    geometry_msgs::Point dir;
-    dir.x = ingress_lane.back().x - ingress_lane[ingress_lane.size() - 2].x;
-    dir.y = ingress_lane.back().y - ingress_lane[ingress_lane.size() - 2].y;
-
-    // Calculate the orthogonal direction
-    geometry_msgs::Point ortho_dir;
-    ortho_dir.x = -dir.y;
-    ortho_dir.y = dir.x;
-
-    // Normalize the orthogonal direction
-    double length = std::sqrt(ortho_dir.x * ortho_dir.x + ortho_dir.y * ortho_dir.y);
-    ortho_dir.x /= length;
-    ortho_dir.y /= length;
-
-    // Scale by the desired width
-    ortho_dir.x *= width / 2;
-    ortho_dir.y *= width / 2;
-
-    // Calculate the stop line points
-    stop_line[0].x = ingress_lane.back().x + ortho_dir.x;
-    stop_line[0].y = ingress_lane.back().y + ortho_dir.y;
-    stop_line[1].x = ingress_lane.back().x - ortho_dir.x;
-    stop_line[1].y = ingress_lane.back().y - ortho_dir.y;
-
-    return stop_line;
-}
-
-double PLANNER::calculateDistance(std::vector<double>& point1, std::vector<double>& point2)
-{
-    double dx = point2[0] - point1[0];
-    double dy = point2[1] - point1[1];
-    // std::cout << "Inside calculateDistance in trajectory_planner.cpp";
-    return std::sqrt(dx * dx + dy * dy);
-}
-
-// double PLANNER::distanceToStopLine(std::vector<double>& vehicle_position, const std::vector<geometry_msgs::Point>& stop_line) 
-// {
-//     std::vector<double> stop_line_point1 = {stop_line[0].x, stop_line[0].y};
-//     std::vector<double> stop_line_point2 = {stop_line[1].x, stop_line[1].y};
-//     double distance1 = calculateDistance(vehicle_position, stop_line_point1);
-//     double distance2 = calculateDistance(vehicle_position, stop_line_point2);
-//     // double distance1 = calculateDistance(vehicle_position, stop_line[0]);   
-//     // double distance2 = calculateDistance(vehicle_position, stop_line[1]);
-//     // std::cout << "Inside distanceToStopLine in trajectory_planner.cpp";
-//     return std::min(distance1, distance2);
-// }
-
-double PLANNER::distanceToStopLine(std::vector<double>& vehicle_position, const std::vector<geometry_msgs::Point>& stop_line) {
-    if (stop_line.size() != 2) {
-        throw std::invalid_argument("stop_line must contain exactly 2 points.");
-    }
-
-    // Vehicle position
-    double px = vehicle_position[0];
-    double py = vehicle_position[1];
-
-    // Stop line points
-    double x1 = stop_line[0].x;
-    double y1 = stop_line[0].y;
-    double x2 = stop_line[1].x;
-    double y2 = stop_line[1].y;
-
-    // Vector from point x1, y1 to point x2, y2 (line segment)
-    double dx = x2 - x1;
-    double dy = y2 - y1;
-
-    // If the segment is just a point, return distance to that point
-    if (dx == 0 && dy == 0) {
-        return std::sqrt((px - x1) * (px - x1) + (py - y1) * (py - y1));
-    }
-
-    // Project the point onto the line segment
-    double t = ((px - x1) * dx + (py - y1) * dy) / (dx * dx + dy * dy);
-
-    // Clamp t to the range [0, 1] to stay within the segment
-    t = std::max(0.0, std::min(1.0, t));
-
-    // Find the closest point on the segment to the vehicle position
-    double closestX = x1 + t * dx;
-    double closestY = y1 + t * dy;
-
-    // Calculate the distance from the vehicle position to the closest point
-    double distance = std::sqrt((px - closestX) * (px - closestX) + (py - closestY) * (py - closestY));
-
-    return distance;
-}
-
 /*
  *
  * Entry point of the ROS node.
@@ -572,3 +375,4 @@ int main(int argc, char **argv)
 
     return 0;
 }
+

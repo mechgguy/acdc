@@ -309,7 +309,7 @@ public:
         STATE = 23,
         CHANGE = 24,
         DISTALONGPATH = 25,
-        X_IL = 26, // ingress lane
+        X_IL = 26,
         Y_IL = 27,
         DECELMODE = 28,
     };
@@ -323,7 +323,6 @@ public:
         bool red;
         int change;
         ros::Time last_spat;
-        int size; // added
     };
 
     std::vector<TrafficLight> trafficlights;
@@ -376,7 +375,7 @@ public:
         publisher_trj = n.advertise<definitions::IkaTpTrajectoryInterface>("/mpc/trajectory_interface", 1000);
         publisher_cost = n.advertise<std_msgs::Float64>("/mpc/final_cost", 1000);
         publisher_rviz = n.advertise<visualization_msgs::Marker>("/mpc/visualization_marker_array", 0);
-        publisher_status = n.advertise<std_msgs::Bool>("/NodeStatus", 1);
+        publisher_NodeStatus = n.advertise<std_msgs::Bool>("/NodeStatus", 1);
 
         // Dynamic reconfigure
         dynamic_reconfigure::Server<trajectory_planner::trajectory_plannerConfig> server;
@@ -389,15 +388,6 @@ public:
         dx = 0.0;
         dy = 0.0;
         ds = 0.0;
-
-        // add variables
-        std::vector<geometry_msgs::Point> stop_line;
-        // stop_line = new std::vector<geometry_msgs::Point>;
-
-        // stop_line = std::vector<geometry_msgs::Point>(2);
-        double stop_distance = 0.0;
-        std::vector<geometry_msgs::Point> ingress_lane;
-
 
         //TF
         transform_buffer_ = new tf2_ros::Buffer;
@@ -559,14 +549,6 @@ public:
         K = ilqr_settings_mpc.computeK(timeHorizon);
 
         ROS_INFO_STREAM("Initialization of Trajectory Planner done!");
-
-        // add variables
-        std::vector<geometry_msgs::Point> stop_line;
-        // stop_line = new std::vector<geometry_msgs::Point>;
-
-        // stop_line = std::vector<geometry_msgs::Point>(2);
-        double stop_distance;
-
 
         bReset = true;
     }
@@ -828,7 +810,7 @@ public:
 
         std_msgs::Bool msg;
         msg.data = true;
-        publisher_status.publish(msg);
+        publisher_NodeStatus.publish(msg);
         //ROS_INFO_STREAM("NodeStatus msg published");
     }
 
@@ -875,11 +857,6 @@ public:
         return change;
     }
 
-    double time2next(const StateVectorArray<state_dim> &traj, const size_t &index)
-    {
-        return traj[index + 1][2] - traj[index][2];
-    }
-
     double getTLDistAlongPath(const PLANNER::TrafficLight &tl){
         
         // Compute TL Distance along reference path
@@ -913,13 +890,6 @@ public:
 
         return totalDist;
     }
-
-    double distance2next(const PLANNER::TrafficLight tl1)
-    {
-        // TODO: This is not correct, it should be the distance to the end of the last lane
-        return std::sqrt(std::pow(tl1.ingress_lane.back().x, 2.0) + std::pow(tl1.ingress_lane.back().y, 2.0));
-    }
-
 
     // intpTraj can be a state/control vector or a feedback matrix
     template <typename TrajType>
@@ -1067,19 +1037,20 @@ public:
             // overwrite values in referenceVelocity that are higher than optAvgSpeed with optAvgSpeed
             if (optAvgSpeed != 0)
             {
-                paramVector(TRAFFICLIGHT::DECELMODE - state_dim) = 1;
-                ROS_INFO_STREAM("Limited desired speed to " << std::to_string(optAvgSpeed) << " m/s in order to avoid idling.");
+                // paramVector(TRAFFICLIGHT::DECELMODE - state_dim) = 1;
+                // ROS_INFO_STREAM("Limited desired speed to " << std::to_string(optAvgSpeed) << " m/s in order to avoid idling.");
                 for (int i = 0; i < referenceVelocity.size(); i++) 
                 {
                     if (referenceVelocity[i] > optAvgSpeed){
-                        referenceVelocity[i] = optAvgSpeed;
+                        // referenceVelocity[i] = optAvgSpeed;
                     }
                 }
             }
             else
             {
-                paramVector(TRAFFICLIGHT::DECELMODE - state_dim) = 0;
+                // paramVector(TRAFFICLIGHT::DECELMODE - state_dim) = 0;
             }
+            paramVector(TRAFFICLIGHT::DECELMODE - state_dim) = 0;
         }
         else
         {
@@ -1157,20 +1128,12 @@ public:
             }
             return objects[id_lowest_cost];
         }
-
     }
-
-    // added here
-    // double distanceToStopLine(const geometry_msgs::Point& vehicle_position, const std::vector<geometry_msgs::Point>& stop_line);
-    std::vector<geometry_msgs::Point> createStopLine(const std::vector<geometry_msgs::Point>& ingress_lane, double width);
-    double distanceToStopLine(std::vector<double>& point_from, const std::vector<geometry_msgs::Point>& stop_line);
-    double calculateDistance(std::vector<double>& point1, std::vector<double>& point2);
-    std::vector<PLANNER::TrafficLight> getTwoRelevantTrafficLights(std::vector<TrafficLight> tls, std::vector<geometry_msgs::Point> refPath); // added
-    int getClosestRefpathID(std::vector<geometry_msgs::Point> refPath);
-
 
     // Defined in .cpp files
     TrafficLight getRelevantTrafficLight(std::vector<TrafficLight> tls);
+    std::vector<PLANNER::TrafficLight> getTwoRelevantTrafficLights(std::vector<TrafficLight> tls, std::vector<geometry_msgs::Point> refPath);
+    int getClosestRefpathID(std::vector<geometry_msgs::Point> refPath);
     std::vector<PLANNER::TrafficLight> getLocalTrafficLights();
     void callbackSPAT(const definitions::v2x_SPAT& msg);
     void callbackMAP(const definitions::v2x_MAP& msg);
@@ -1188,11 +1151,9 @@ protected:
     ros::Subscriber subscriber_spat;
     ros::Subscriber subscriber_map;
     ros::Publisher publisher_trj;
-    ros::Publisher publisher_rviz;
-    ros::Publisher publisher_stopline;
-    ros::Publisher publisher_trafficlight;
-    ros::Publisher publisher_status;
     ros::Publisher publisher_cost;
+    ros::Publisher publisher_rviz;
+    ros::Publisher publisher_NodeStatus;
 
     // Odometry
     definitions::FlatlandVehicleState vehicleData;

@@ -73,6 +73,7 @@ class ETSIViz {
     visualization_msgs::Marker MAP2RefText(const definitions::v2x_MAP_Intersection& isctn, const size_t& id) const;
     visualization_msgs::Marker MAPLane2LS(const definitions::v2x_MAP_Lane& lane, const std::string& frame_id, const size_t& id) const;
     visualization_msgs::Marker MAPLane2Text(const definitions::v2x_MAP_Lane& lane, const std::string& frame_id, const size_t& id) const;
+    visualization_msgs::Marker MAPLane2Points(const definitions::v2x_MAP_Lane& lane, const std::string& frame_id, const size_t& id) const; // added
 
     ros::NodeHandle node_handle_;
     ros::NodeHandle private_node_handle_;

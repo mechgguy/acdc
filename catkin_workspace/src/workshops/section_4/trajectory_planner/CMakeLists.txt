@@ -88,7 +88,13 @@ include_directories(
 ## With catkin_make all packages are built within a single CMake context
 ## The recommended prefix ensures that target names across packages don't collide
 add_executable(${PROJECT_NAME} src/trajectory_planner.cpp src/v2x_planner_interface.cpp)
+add_executable(${PROJECT_NAME}_original src/trajectory_planner_original.cpp src/v2x_planner_interface_original.cpp)
+add_executable(${PROJECT_NAME}_original_stabilized src/trajectory_planner_original_stabilized.cpp src/v2x_planner_interface_original_stabilized.cpp)
 set_property(TARGET ${PROJECT_NAME} PROPERTY CXX_STANDARD 11)
+set_property(TARGET ${PROJECT_NAME}_original PROPERTY CXX_STANDARD 11)
+set_property(TARGET ${PROJECT_NAME}_original_stabilized PROPERTY CXX_STANDARD 11)
 target_link_libraries(${PROJECT_NAME} ct_optcon ${catkin_LIBRARIES})
+target_link_libraries(${PROJECT_NAME}_original ct_optcon ${catkin_LIBRARIES})
+target_link_libraries(${PROJECT_NAME}_original_stabilized ct_optcon ${catkin_LIBRARIES})
 
 add_dependencies(${PROJECT_NAME} ${PROJECT_NAME}_gencfg)

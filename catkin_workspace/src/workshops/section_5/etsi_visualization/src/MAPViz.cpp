@@ -124,6 +124,60 @@ visualization_msgs::Marker ETSIViz::MAPLane2LS(const definitions::v2x_MAP_Lane& 
     marker.ns="MAPEM_Lanes";
     marker.id = id;
     marker.action = 0;
+    marker.type = visualization_msgs::Marker::LINE_STRIP;    
+    // marker.type = visualization_msgs::Marker::POINTS;
+    // marker.points = lane.lane_coordinates;
+
+    // Change color depending on driving direction
+    if (lane.directionalUse == 0) { // Ingress
+        auto lane_len = lane.lane_coordinates.size();
+        geometry_msgs::Point pt1 = lane.lane_coordinates[lane_len];
+        geometry_msgs::Point pt2 = lane.lane_coordinates[lane_len-1];
+        auto diff_x = pt2.x - pt1.x;
+        auto diff_y = pt2.y - pt1.y;
+        auto length = std::sqrt(diff_x * diff_x + diff_y * diff_y); 
+        
+        std::vector<geometry_msgs::Point> lane_points = {pt1, pt2};
+        marker.points = lane_points;
+        marker.color.r = (131.0/255.0);
+        marker.color.g = (226.0/255.0);
+        marker.color.b = (242.0/255.0);
+        if (lane.directionalUse == 1) { // Egress
+        marker.color.r = (131.0/255.0);
+        marker.color.g = (242.0/255.0);
+        marker.color.b = (195.0/255.0);
+    } else { // Unknown
+        marker.color.r = (130.0/255.0);
+        marker.color.g = (219.0/255.0);
+        marker.color.b = (207.0/255.0);
+    }
+
+    // Change opacity depending on laneType
+    if (lane.laneType == 0) { // Vehicle as "relevant" lanes
+        marker.color.a = 1.0;
+    } else {
+        marker.color.a = 0.5;
+    }
+    marker.scale.x = 0.5;
+    marker.scale.y = 0.5;
+    marker.scale.z = 0.5;
+    marker.pose.orientation.x = 0.0;
+    marker.pose.orientation.y = 0.0;
+    marker.pose.orientation.z = 0.0;
+    marker.pose.orientation.w = 1.0;
+    }
+    return marker;
+}
+
+visualization_msgs::Marker ETSIViz::MAPLane2Points(const definitions::v2x_MAP_Lane& lane, const std::string& frame_id, const size_t& id) const
+{
+    visualization_msgs::Marker marker;
+    marker.header.frame_id = frame_id;
+    marker.header.stamp = ros::Time::now();
+
+    marker.ns="MAPEM_POINTS";
+    marker.id = id;
+    marker.action = 0;
     marker.type = visualization_msgs::Marker::POINTS;
     marker.points = lane.lane_coordinates;
 

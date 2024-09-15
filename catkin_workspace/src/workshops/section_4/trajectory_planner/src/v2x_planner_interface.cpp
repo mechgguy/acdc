@@ -40,38 +40,38 @@ void PLANNER::callbackSPAT(const definitions::v2x_SPAT& msg)
 {
     // Process SPATEM
 
-    // ### START CODE HERE ###
     // Identify number of intersections in message
-    int n_intersections = msg.spatData_intersections.size(); // Task // fill here
-    // ### END CODE HERE ###
+    int n_intersections = msg.spatData_intersections.size();    // Task // fill here
 
     // Loop all intersections in message
     for(int i = 0; i < n_intersections; i++) {
-        definitions::v2x_SPAT_IntersectionState spat_intsctn = msg.spatData_intersections[i];
-        // Loop all movement states to get signal groups
-        for(int m = 0; m < spat_intsctn.states.size(); m++) {
-            //Loop all traffic lights stored in the map data
-            for(int k = 0; k<trafficlights.size(); k++)
+    definitions::v2x_SPAT_IntersectionState spat_intsctn = msg.spatData_intersections[i];
+    // Loop all movement states to get signal groups
+    for(int m = 0; m < spat_intsctn.states.size(); m++) {
+        //Loop all traffic lights stored in the map data
+        for(int k = 0; k<trafficlights.size(); k++)
+        {
+            if(trafficlights[k].stationID == msg.header_stationID && trafficlights[k].sig_id == spat_intsctn.states[m].signalGroup)
             {
-                if(trafficlights[k].stationID == msg.header_stationID && trafficlights[k].sig_id == spat_intsctn.states[m].signalGroup)
+                trafficlights[k].last_spat = ros::Time::now();
+                // ### START CODE HERE ###
+                // Check if signal state is red or not
+                // fill here
+                if(spat_intsctn.states[m].state_time_speed[0].eventState == 5 || spat_intsctn.states[m].state_time_speed[0].eventState == 6)
                 {
-                    trafficlights[k].last_spat = ros::Time::now();
-
-                     // ### START CODE HERE ###
-                    // Check if signal state is red or not
-                    // fill here
-                    if(spat_intsctn.states[m].state_time_speed[0].eventState == 5 || spat_intsctn.states[m].state_time_speed[0].eventState == 6)
-                    {
-                        trafficlights[k].red = false;
-                    }
-                    else
-                    {
-                        trafficlights[k].red = true;
-                    }
-                    // trafficlights[k].red = true; // Task 
-                    // ### END CODE HERE ###
+                    trafficlights[k].red = false;
                 }
+                else
+                {
+                    trafficlights[k].red = true;
+                }
+
+                trafficlights[k].change = (int)(spat_intsctn.states[m].state_time_speed[0].timing_likelyTime); // added
+                // trafficlights[k].red = true; // Task 
+                // ### END CODE HERE ###
+
             }
+        }
         }
     }
 }
@@ -88,7 +88,7 @@ void PLANNER::callbackMAP(const definitions::v2x_MAP& msg)
 
     // Loop all intersections in message
     for(int i = 0; i < n_intersections; i++) {
-        definitions::v2x_MAP_Intersection intsctn = msg.intersections[i];
+    definitions::v2x_MAP_Intersection intsctn = msg.intersections[i];
 
         // Loop all lanes to get signal groups and traffic light positions
         for(int m = 0; m < intsctn.adjacent_lanes.size(); m++) {
@@ -97,7 +97,7 @@ void PLANNER::callbackMAP(const definitions::v2x_MAP& msg)
             
             // ### START CODE HERE ###
             // only ingress lanes can consider traffic signals -> skip all egress lanes
-            bool is_egress_lane = lane.directionalUse != definitions::v2x_MAP_Lane::LaneDirection_ingressPath; // Task      // fill here      
+            bool is_egress_lane = lane.directionalUse != definitions::v2x_MAP_Lane::LaneDirection_ingressPath; // Task // fill here         
             if (is_egress_lane){
                 continue;
             }
@@ -133,7 +133,7 @@ PLANNER::TrafficLight PLANNER::getRelevantTrafficLight(std::vector<TrafficLight>
     }
     else if(tls.size()<=0)
     {
-        ROS_ERROR_STREAM("No TrafficLight in vector! Properly there was no MAPEM received!");
+        ROS_ERROR_STREAM("No TrafficLight in vector! Probably no MAPEM have been received!");
     }
     else //Search for relevant Target
     {
@@ -169,7 +169,145 @@ PLANNER::TrafficLight PLANNER::getRelevantTrafficLight(std::vector<TrafficLight>
         }
         return tls[id_lowest_cost];
     }
+    
+    return tls[0];  // for catkin // added
 }
+
+// x, y is your target point and x1, y1 to x2, y2 is your line segment
+double distanceToLineSeg(double x, double y, double x1, double y1, double x2, double y2) {
+
+    double A = x - x1;
+    double B = y - y1;
+    double C = x2 - x1;
+    double D = y2 - y1;
+
+    double dot = A * C + B * D;
+    double len_sq = C * C + D * D;
+    double param = -1;
+    if (len_sq != 0) //in case of 0 length line
+    {
+        param = dot / len_sq;
+    }
+
+    double xx, yy;
+
+    if (param < 0) {
+        xx = x1;
+        yy = y1;
+    }
+    else if (param > 1) {
+        xx = x2;
+        yy = y2;
+    }
+    else {
+        xx = x1 + param * C;
+        yy = y1 + param * D;
+    }
+
+    double dx = x - xx;
+    double dy = y - yy;
+    return std::sqrt(dx * dx + dy * dy);
+}
+
+
+// Function that derives the two relevant traffic lights in the local vehicle environment.
+std::vector<PLANNER::TrafficLight> PLANNER::getTwoRelevantTrafficLights(std::vector<TrafficLight> tls, std::vector<geometry_msgs::Point> refPath)
+{
+    // ROS_WARN_STREAM("getTwoRelevantTrafficLights start");
+
+    std::vector<TrafficLight> returntls{};
+
+    if(tls.size()<=0)
+    {
+        ROS_ERROR_STREAM("No TrafficLight in vector! Properly there was no MAPEM received!");
+    }
+    else //Search for relevant Targets
+    {
+        double distThreshold = 0.4;
+        double lowestDist = INFINITY;
+        double lowestDist_two = INFINITY;
+        int tl_id_lowestDist = 0;
+        int tl_id_lowestDist_two = 0;
+        int refpath_id_lowestDist = 0;
+        int refpath_id_lowestDist_two = 0;
+
+        // Compute local coordinates for reference path
+        int id_closestDist = getClosestRefpathID(refPath);
+
+        // loop through future reference path and select closest traffic lights
+        for(int i = 0; i<tls.size(); i++)
+        {
+
+            for(int k = id_closestDist; k < refPath.size(); k++)
+            {
+                // Skip first iteration where no line can be constructed
+                if (k == 0)
+                {
+                    continue;
+                }
+
+                // get distance between the traffic light and the line that is defined by the current refPath location and the previous refPath location
+                double distToLine = distanceToLineSeg(tls[i].ingress_lane.back().x, tls[i].ingress_lane.back().y, refPath[k-1].x, refPath[k-1].y, refPath[k].x, refPath[k].y);
+
+                // Update lowest dists
+                if(distToLine < lowestDist)
+                {
+                    // check if previous lowest dist is now second lowest dist
+                    if (lowestDist < lowestDist_two)
+                    {
+                        lowestDist_two = lowestDist;
+                        tl_id_lowestDist_two = tl_id_lowestDist;
+                        refpath_id_lowestDist_two = refpath_id_lowestDist;
+                    }
+
+                    lowestDist = distToLine;
+                    tl_id_lowestDist = i;
+                    refpath_id_lowestDist = k;
+                }
+                else if(distToLine < lowestDist_two)
+                {
+                    lowestDist_two = distToLine;
+                    tl_id_lowestDist_two = i;
+                    refpath_id_lowestDist_two = k;
+                }
+            }
+        }
+
+        // Check whether lowest distances are below defined threshold (are they actually in the lane?)
+        if (lowestDist < distThreshold && lowestDist_two < distThreshold)
+        {
+            // both TLs are in lane 
+            // Swap places if TL2 is spacially before TL1
+            if(refpath_id_lowestDist_two < refpath_id_lowestDist)
+            {
+                returntls.push_back(tls[tl_id_lowestDist_two]);
+                returntls.push_back(tls[tl_id_lowestDist]);
+            }
+            else 
+            {
+                returntls.push_back(tls[tl_id_lowestDist]);
+                returntls.push_back(tls[tl_id_lowestDist_two]);
+            }
+        }
+        else if (lowestDist < distThreshold)
+        {
+            // only 1st TL is in lane
+            returntls.push_back(tls[tl_id_lowestDist]);
+        }
+        else if (lowestDist_two < distThreshold)
+        {
+            // only 2nd TL is in lane
+            returntls.push_back(tls[tl_id_lowestDist_two]);
+        }
+        else
+        {
+            // no TL is in lane, append nothing to returntls
+        }
+    }
+
+    return returntls;
+}
+
 
 // Function that transforms the traffic-lights given in a global map-frame into local vehicle coordinates
 std::vector<PLANNER::TrafficLight> PLANNER::getLocalTrafficLights()
@@ -205,3 +343,78 @@ std::vector<PLANNER::TrafficLight> PLANNER::getLocalTrafficLights()
     }
     return loc_tl;
 }
+
+// Function that computes the closest reference path point in front of the current ego vehicle position.
+int PLANNER::getClosestRefpathID(std::vector<geometry_msgs::Point> refPath)
+{
+    double closestDist = -1;
+    double currentDist = 0;
+    int id_closestDist = 0;
+
+    for(int j = 0; j < refPath.size(); j++)
+    {
+        currentDist = std::sqrt(pow(refPath[j].x, 2.0) + pow(refPath[j].y, 2.0));
+
+        // Take closest pose in front of the vehicle
+        if ((closestDist == -1) || (currentDist < closestDist && refPath[j].x > 0))
+        {
+            closestDist = currentDist;
+            id_closestDist = j;
+        }
+    }
+
+    return id_closestDist;
+}
+
+// already in tp.cpp
+
+// double calculateDistance(std::vector<double>& point1, std::vector<double>& point2)
+// {
+//     double dx = point2[0] - point1[0];
+//     double dy = point2[1] - point1[1];
+//     // std::cout << "Inside calculateDistance in trajectory_planner.cpp";
+//     return std::sqrt(dx * dx + dy * dy);
+// }
+
+// double PLANNER::distanceToStopLine(std::vector<double>& vehicle_position, const std::vector<geometry_msgs::Point>& stop_line) {
+//     if (stop_line.size() != 2) {
+//         throw std::invalid_argument("stop_line must contain exactly 2 points.");
+//     }
+
+//     // Vehicle position
+//     double px = vehicle_position[0];
+//     double py = vehicle_position[1];
+
+//     // Stop line points
+//     double x1 = stop_line[0].x;
+//     double y1 = stop_line[0].y;
+//     double x2 = stop_line[1].x;
+//     double y2 = stop_line[1].y;
+
+//     // Vector from point x1, y1 to point x2, y2 (line segment)
+//     double dx = x2 - x1;
+//     double dy = y2 - y1;
+
+//     // If the segment is just a point, return distance to that point
+//     if (dx == 0 && dy == 0) {
+//         return std::sqrt((px - x1) * (px - x1) + (py - y1) * (py - y1));
+//     }
+
+//     // Project the point onto the line segment
+//     double t = ((px - x1) * dx + (py - y1) * dy) / (dx * dx + dy * dy);
+
+//     // Clamp t to the range [0, 1] to stay within the segment
+//     t = std::max(0.0, std::min(1.0, t));
+
+//     // Find the closest point on the segment to the vehicle position
+//     double closestX = x1 + t * dx;
+//     double closestY = y1 + t * dy;
+
+//     // Calculate the distance from the vehicle position to the closest point
+//     double distance = std::sqrt((px - closestX) * (px - closestX) + (py - closestY) * (py - closestY));
+
+//     return distance;
+// }
+
+
+

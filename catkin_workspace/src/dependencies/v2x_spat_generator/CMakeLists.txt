@@ -25,7 +25,7 @@ include_directories(
 
 
 # SPaT Generator Node
-add_executable(v2x_spat_generator_node src/spat_generator_node.cpp)
+add_executable(v2x_spat_generator_node src/spat_generator_node.cpp src/NodeStatus.cpp)
 add_dependencies(v2x_spat_generator_node ${v2x_spat_generator_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 
 target_compile_features(v2x_spat_generator_node PUBLIC cxx_std_11)

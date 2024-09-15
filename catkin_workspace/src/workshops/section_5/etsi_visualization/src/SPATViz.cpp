@@ -133,60 +133,60 @@ visualization_msgs::Marker ETSIViz::SG2Sphere(const geometry_msgs::Point pt, con
     // fill here
     switch(state) {
         case 0:
-        marker.color.r = 0.1;
-        marker.color.g = 0.1;
-        marker.color.b = 0.1;
-        break;
+            marker.color.r = 0.1;
+            marker.color.g = 0.1;
+            marker.color.b = 0.1;
+            break;
         case 1:
-        marker.color.r = 0.1;
-        marker.color.g = 0.1;
-        marker.color.b = 0.1;
-        break;
+            marker.color.r = 0.1;
+            marker.color.g = 0.1;
+            marker.color.b = 0.1;
+            break;
         case 2:
-        marker.color.r = 1.0;
-        marker.color.g = 0.0;
-        marker.color.b = 0.0;
-        break;
+            marker.color.r = 1.0;
+            marker.color.g = 0.0;
+            marker.color.b = 0.0;
+            break;
         case 3:
-        marker.color.r = 1.0;
-        marker.color.g = 0.0;
-        marker.color.b = 0.0;
-        break;
+            marker.color.r = 1.0;
+            marker.color.g = 0.0;
+            marker.color.b = 0.0;
+            break;
         case 4:
-        marker.color.r = 1.0;
-        marker.color.g = 1.0;
-        marker.color.b = 0.0;
-        break;
+            marker.color.r = 1.0;
+            marker.color.g = 1.0;
+            marker.color.b = 0.0;
+            break;
         case 5:
-        marker.color.r = 0.0;
-        marker.color.g = 1.0;
-        marker.color.b = 0.0;
-        break;
+            marker.color.r = 0.0;
+            marker.color.g = 1.0;
+            marker.color.b = 0.0;
+            break;
         case 6:
-        marker.color.r = 0.0;
-        marker.color.g = 1.0;
-        marker.color.b = 0.0;
-        break;
+            marker.color.r = 0.0;
+            marker.color.g = 1.0;
+            marker.color.b = 0.0;
+            break;
         case 7:
-        marker.color.r = 1.0;
-        marker.color.g = 1.0;
-        marker.color.b = 0.0;
-        break;
+            marker.color.r = 1.0;
+            marker.color.g = 1.0;
+            marker.color.b = 0.0;
+            break;
         case 8:
-        marker.color.r = 1.0;
-        marker.color.g = 1.0;
-        marker.color.b = 0.0;
-        break;
+            marker.color.r = 1.0;
+            marker.color.g = 1.0;
+            marker.color.b = 0.0;
+            break;
         case 9:
-        marker.color.r = 1.0;
-        marker.color.g = 1.0;
-        marker.color.b = 0.0;
-        break;
+            marker.color.r = 1.0;
+            marker.color.g = 1.0;
+            marker.color.b = 0.0;
+            break;
         default:
-        marker.color.r = 0.1;
-        marker.color.g = 0.1;
-        marker.color.b = 0.1;
-        break;
+            marker.color.r = 0.1;
+            marker.color.g = 0.1;
+            marker.color.b = 0.1;
+            break;
         }
 
     // fill here

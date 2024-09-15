@@ -84,11 +84,11 @@ void ETSIViz::CAMCallback(const definitions::v2x_CAM& msg){
       // ### START CODE HERE
       // fill with information from message
       // use helping comments from Wiki
-      obj.IdInternal = 0; // stationID               // Task // fill here
-      float lon = 0;      // longitude (x)           // Task // fill here
+      obj.IdInternal = msg.header_stationID; // stationID               // Task // fill here
+      float lon = msg.basic_container.referencePosition_longitude;      // longitude (x)           // Task // fill here
       float lat = msg.basic_container.referencePosition_latitude;      // latitude (y)            // Task // fill here
       float v_x = msg.high_freq_container.speed_speedValue * std::cos(msg.high_freq_container.heading_headingValue);      // velocity in x direction // Task // fill here
-      float v_y = 0;      // velocity in y direction // Task // fill here
+      float v_y = msg.high_freq_container.speed_speedValue * std::sin(msg.high_freq_container.heading_headingValue);      // velocity in y direction // Task // fill here
       // ### END CODE HERE
 
     obj.fMean.resize((int)definitions::ctra_model::COUNT);
@@ -156,6 +156,7 @@ void ETSIViz::markerCallback(const ros::TimerEvent& event) {
       {
         markers.markers.push_back(MAPLane2LS(lane, converted_isctns_[i].header.frame_id, ids_mapem_lanes++));
         markers.markers.push_back(MAPLane2Text(lane, converted_isctns_[i].header.frame_id, ids_mapem_lanes++));
+        markers.markers.push_back(MAPLane2Points(lane, converted_isctns_[i].header.frame_id, ids_mapem_lanes++)); // added
       }
 
       // Check if spat available for this intersection

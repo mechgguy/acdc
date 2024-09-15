@@ -54,7 +54,7 @@
   </include>
 
   <!-- Trajectory Planner -->
-  <node name="trajectory_planner" pkg="trajectory_planner" type="trajectory_planner" output="screen">
+  <node name="trajectory_planner_original" pkg="trajectory_planner" type="trajectory_planner_original" output="screen">
       <param name="topic_spatem" value="/TopicSPATs" />
       <param name="topic_mapem" value="/TopicMAPs" />
   </node>
